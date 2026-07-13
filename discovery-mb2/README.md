@@ -28,7 +28,7 @@ rustc -V # >=1.17.0
 
 ### `cargo-binutils`
 
-```shell
+```sh
 rustup component add llvm-tools
 cargo install cargo-binutils --vers '^0.3'
 cargo size --version
@@ -36,37 +36,37 @@ cargo size --version
 
 ### `probe-rs-tools`
 
-```shell
+```sh
 brew install probe-rs/probe-rs/probe-rs
 cargo embed --version
 ```
 
 ### `gdb`
 
-```shell
+```sh
 brew install gdb
 ```
 
 ### `minicom`
 
-```shell
+```sh
 brew install minicom
 ```
 
 ### `lsusb`
 
-```shell
+```sh
 brew install lsusb
 ```
 
 ### Verify the Installation
 
-```shell
+```sh
 probe-rs list
 probe-rs info
 ```
 
-```shell
+```sh
 cd source/mdbook/src/03-setup
 rustup target add thumbv7em-none-eabihf
 cargo embed --target thumbv7em-none-eabihf
@@ -114,3 +114,166 @@ cargo embed --target thumbv7em-none-eabihf
 - Provides a set of traits that describe behavior which is usually shared across all implementations of a specific peripheral in all the HALs
 - e.g. functions that are capable of turning the power on a pin either on or off: to switch an LED on and off on the board or whatever
 - Allows us to write a driver for some piece of hardware that can be used on any chip for which an implementation of the `embedded-hal` traits exists
+
+## 5. Meet Your Software
+
+### Embedded Setup
+
+```rust
+// main.rs
+#![deny(unsafe_code)]
+#![no_main]
+#![no_std]
+
+use cortex_m::asm;
+use cortex_m_rt::entry;
+use microbit as _;
+use panic_halt as _;
+
+#[entry]
+fn main() -> ! {
+    loop {
+        asm::nop();
+    }
+}
+```
+
+```toml
+# .cargo/config.toml
+[build]
+target = "thumbv7em-none-eabihf"
+
+[target.thumbv7em-none-eabihf]
+runner = "probe-rs run --chip nRF52833_xxAA"
+rustflags = [
+  "-C", "linker=rust-lld",
+]
+```
+
+```toml
+# Embed.toml
+[default.general]
+chip = "nrf52833_xxAA"
+
+[default.reset]
+halt_afterwards = true
+
+[default.rtt]
+enabled = false
+
+[default.gdb]
+enabled = true
+```
+
+### Build It
+
+#### Targets
+
+- `thumbv6m-none-eabi`, for the Cortex-M0 and Cortex-M1 processors
+- `thumbv7m-none-eabi`, for the Cortex-M3 processor
+- `thumbv7em-none-eabi`, for the Cortex-M4 and Cortex-M7 processors
+- `thumbv7em-none-eabihf`, for the Cortex-M4F and Cortex-M7F processors
+- `thumbv8m.main-none-eabi`, for the Cortex-M33 and Cortex-M35P processors
+- `thumbv8m.main-none-eabihf`, for the Cortex-M33F and Cortex-M35PF processors
+
+#### Pre-compiled Standard Library
+
+```sh
+rustup target add thumbv7em-none-eabihf
+```
+
+#### Cross-compile Program
+
+```sh
+# cd source/mdbook/05-meet-your-software
+cargo build --example init
+```
+
+#### Verify Binary
+
+```sh
+cargo readobj --example init -- --file-headers
+```
+
+### Flash It
+
+```sh
+cargo embed --example init
+```
+
+### Debug It
+
+```sh
+gdb ../../../target/thumbv7em-none-eabihf/debug/examples/init
+```
+
+#### Connecting
+
+```sh
+target remote :1337
+```
+
+#### Breakpoints
+
+```sh
+break main
+break <line-num>
+```
+
+```sh
+continue
+```
+
+```sh
+info break
+```
+
+```sh
+delete <breakpoint-num>
+```
+
+#### TUI
+
+```sh
+layout src
+layout asm
+```
+
+```sh
+tui disable
+```
+
+#### Printing
+
+```sh
+info locals
+```
+
+```sh
+print x
+print &x
+```
+
+#### Execute Next Line
+
+```sh
+next
+```
+
+#### Execute Next Instruction
+
+```sh
+stepi
+```
+
+#### Back To Main
+
+```sh
+monitor reset
+```
+
+#### Quit
+
+```sh
+quit
+```
